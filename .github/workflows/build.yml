@@ -29,11 +29,17 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: Add plugins
+    - name: Add Plugins
       run: |
         cd openwrt/package
-        git clone https://github.com/nikkinikki-org/OpenWrt-nikki.git
-        git clone https://github.com/sirpdboy/luci-app-lucky.git package/lucky
+        mkdir -p custom
+        cd custom
+        git clone https://github.com/nikkinikki-org/OpenWrt-nikki.git nikki
+        git clone https://github.com/sirpdboy/luci-app-lucky.git lucky
+
+    - name: Remove Conflicting Patches
+      run: |
+        rm -f openwrt/target/linux/mediatek/patches-6.6/340-mtd-spinand-Add-support-for-the-Fidelix-FM35X1GA.patch
 
     - name: Generate Config
       run: |
@@ -42,22 +48,22 @@ jobs:
         CONFIG_TARGET_ipq60xx=y
         CONFIG_TARGET_ipq60xx_generic=y
         CONFIG_TARGET_ipq60xx_generic_DEVICE_jdcloud_ax1800pro=y
-
+        
         # 文件系统格式
         CONFIG_TARGET_ROOTFS_EXT4FS=y
         CONFIG_EFI_IMAGES=y
-
+        
         # 核心应用
         CONFIG_PACKAGE_luci=y
         CONFIG_PACKAGE_nikki=y
         CONFIG_PACKAGE_lucky=y
-
-        # Docker
+        
+        # Docker 支持
         CONFIG_PACKAGE_docker=y
         CONFIG_PACKAGE_dockerd=y
         CONFIG_PACKAGE_luci-app-docker=y
-
-        # IPv6
+        
+        # IPv6 支持
         CONFIG_PACKAGE_ipv6helper=y
         CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
         CONFIG_PACKAGE_odhcp6c=y
@@ -65,11 +71,11 @@ jobs:
         CONFIG_PACKAGE_kmod-ipv6=y
         CONFIG_PACKAGE_kmod-sit=y
         CONFIG_PACKAGE_kmod-wireguard=y
-
-        # WiFi 驱动（LiBwrt 应已集成）
+        
+        # WiFi 驱动
         CONFIG_PACKAGE_kmod-ath11k=y
         CONFIG_PACKAGE_ath11k-firmware=y
-
+        
         # 编译优化
         CONFIG_DEVEL=y
         CONFIG_CCACHE=y
@@ -83,89 +89,89 @@ jobs:
         mkdir -p files/etc/config
 
         cat > files/etc/config/network <<EOF
-              config interface 'loopback'
-                  option device 'lo'
-                  option proto 'static'
-                  option ipaddr '127.0.0.1'
-                  option netmask '255.0.0.0'
-
-              config globals 'globals'
-                  option ula_prefix 'fd00:1234::/48'
-
-              config device
-                  option name 'br-lan'
-                  option type 'bridge'
-                  list ports 'eth0'
-
-              config interface 'lan'
-                  option device 'br-lan'
-                  option proto 'static'
-                  option ipaddr '192.168.1.10'
-                  option netmask '255.255.255.0'
-                  option gateway '192.168.1.253'
-                  list dns '192.168.1.253'
-
-              config interface 'lan6'
-                  option proto 'dhcpv6'
-              EOF
+        config interface 'loopback'
+            option device 'lo'
+            option proto 'static'
+            option ipaddr '127.0.0.1'
+            option netmask '255.0.0.0'
+        
+        config globals 'globals'
+            option ula_prefix 'fd00:1234::/48'
+        
+        config device
+            option name 'br-lan'
+            option type 'bridge'
+            list ports 'eth0'
+        
+        config interface 'lan'
+            option device 'br-lan'
+            option proto 'static'
+            option ipaddr '192.168.1.10'
+            option netmask '255.255.255.0'
+            option gateway '192.168.1.253'
+            list dns '192.168.1.253'
+        
+        config interface 'lan6'
+            option proto 'dhcpv6'
+        EOF
 
         cat > files/etc/config/dhcp <<EOF
-              config dnsmasq
-                  option domainneeded '1'
-                  option boguspriv '1'
-                  option filterwin2k '0'
-                  option localise_queries '1'
-                  option rebind_protection '1'
-                  option rebind_localhost '1'
-                  option local '/lan/'
-                  option domain 'lan'
-                  option expandhosts '1'
-                  option cachesize '1000'
-
-              config dhcp 'lan'
-                  option interface 'lan'
-                  option ignore '1'
-
-              config odhcpd 'odhcpd'
-                  option maindhcp '0'
-                  option leasefile '/tmp/hosts/odhcpd'
-                  option leasetrigger '/usr/sbin/odhcpd-update'
-                  option loglevel '4'
-              EOF
+        config dnsmasq
+            option domainneeded '1'
+            option boguspriv '1'
+            option filterwin2k '0'
+            option localise_queries '1'
+            option rebind_protection '1'
+            option rebind_localhost '1'
+            option local '/lan/'
+            option domain 'lan'
+            option expandhosts '1'
+            option cachesize '1000'
+        
+        config dhcp 'lan'
+            option interface 'lan'
+            option ignore '1'
+        
+        config odhcpd 'odhcpd'
+            option maindhcp '0'
+            option leasefile '/tmp/hosts/odhcpd'
+            option leasetrigger '/usr/sbin/odhcpd-update'
+            option loglevel '4'
+        EOF
 
         cat > files/etc/config/wireless <<EOF
-              config wifi-device 'radio0'
-                  option type 'mac80211'
-                  option path 'platform/soc/c000000.wifi'
-                  option channel '11'
-                  option band '2g'
-                  option htmode 'HT40'
-                  option disabled '0'
-
-              config wifi-iface 'default_radio0'
-                  option device 'radio0'
-                  option mode 'ap'
-                  option ssid '602'
-                  option encryption 'psk2'
-                  option key 'Zgp@6898'
-                  option network 'lan'
-
-              config wifi-device 'radio1'
-                  option type 'mac80211'
-                  option path 'platform/soc/c000000.wifi+1'
-                  option channel '36'
-                  option band '5g'
-                  option htmode 'VHT80'
-                  option disabled '0'
-
-              config wifi-iface 'default_radio1'
-                  option device 'radio1'
-                  option mode 'ap'
-                  option ssid '602_5G'
-                  option encryption 'psk2'
-                  option key 'Zgp@6898'
-                  option network 'lan'
-              EOF
+        config wifi-device 'radio0'
+            option type 'mac80211'
+            option path 'platform/soc/c000000.wifi'
+            option channel '11'
+            option band '2g'
+            option htmode 'HT40'
+            option disabled '0'
+        
+        config wifi-iface 'default_radio0'
+            option device 'radio0'
+            option mode 'ap'
+            option ssid '602'
+            option encryption 'psk2'
+            option key 'Zgp@6898'
+            option network 'lan'
+        
+        config wifi-device 'radio1'
+            option type 'mac80211'
+            option path 'platform/soc/c000000.wifi+1'
+            option channel '36'
+            option band '5g'
+            option htmode 'VHT80'
+            option disabled '0'
+        
+        config wifi-iface 'default_radio1'
+            option device 'radio1'
+            option mode 'ap'
+            option ssid '602_5G'
+            option encryption 'psk2'
+            option key 'Zgp@6898'
+            option network 'lan'
+        EOF
 
     - name: Start Compile
       run: |
@@ -177,4 +183,8 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: OpenWrt-JDCloud-AX1800PRO
-        path: openwrt/bin/targets/
+        path: |
+          openwrt/bin/targets/*/*/*.img.gz
+          openwrt/bin/targets/*/*/*.efi
+          openwrt/bin/targets/*/*/*.ext4*
+          openwrt/bin/targets/*/*/sha256sums
