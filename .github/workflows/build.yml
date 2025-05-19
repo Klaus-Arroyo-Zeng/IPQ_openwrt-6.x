@@ -33,7 +33,7 @@ jobs:
       run: |
         cd openwrt/package
         git clone https://github.com/nikkinikki-org/OpenWrt-nikki.git
-        git clone https://github.com/sirpdboy/lucky lucky
+        git clone https://github.com/sirpdboy/luci-app-lucky.git package/lucky
 
     - name: Generate Config
       run: |
