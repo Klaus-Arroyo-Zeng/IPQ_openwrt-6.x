@@ -1,4 +1,4 @@
-name: Build OpenWrt for JDCloud AX1800 PRO
+name: Build OpenWrt for JDCloud AX1800 PRO-new
 
 on:
   workflow_dispatch:
