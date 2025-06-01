@@ -2,9 +2,14 @@ name: Build OpenWrt for JDCloud AX1800 PRO
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
+    inputs:
+      ssh:
+        description: "Enable SSH debugging"
+        required: false
+        default: "false"
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   build:
@@ -172,7 +177,11 @@ jobs:
             option key 'Zgp@6898'
             option network 'lan'
         EOF
-
+    - name: Setup tmate session (SSH debug)
+      if: ${{ github.event.inputs.ssh == 'true' || contains(github.event.head_commit.message, '[ssh]') }}
+      uses: mxschmitt/action-tmate@v3
+      with:
+        limit-access-to-actor: false  # 仅允许触发者访问 SSH 会话
     - name: Start Compile
       run: |
         cd openwrt
